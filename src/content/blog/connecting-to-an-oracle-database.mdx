@@ -1,0 +1,139 @@
+---
+title: "Connecting to Oracle HeatWave"
+description: "How to connect to an Oracle HeatWave database using Python and cx_Oracle."
+image: "/images/blog/oracle-db.avif"
+date: "2024-09-24"
+author: "Saskia"
+---
+
+## Making Database Connections
+
+Oracle SQL Developer enables developers and DBAs to browse, create, and update data in a database. Before you can perform those actions, however, you must create at least one database connection an Oracle SQL Developer object containing the information needed to connect to a specific database as a specific user.
+
+This column explains how to make connections from Oracle SQL Developer to an Oracle Database and third-party databases. It also discusses authorization options for Oracle Database connections and explains the role of JDBC drivers in the connection process.
+
+All the examples in this column require Oracle SQL Developer to be running on your local machine. For some examples, you need access to a running local or remote Oracle Database instance with the sample HR schema (available in the default database installation). Other examples require access to an Oracle Internet Directory server or a third-party database.
+
+### Basic Connections to Oracle Database
+
+You can connect to a local or remote Oracle Database instance by using the Basic connection type. Basic connections do not require any other Oracle software to be installed on your machine you don't need an Oracle home.
+
+Right-click the Connections node in Oracle SQL Developer's Connections Navigator, and click New Connection to open the New/Select Database Connection dialog box. All of this column's connection examples start from this dialog box.
+
+To create a basic connection for the HR schema, follow these steps:
+
+1. Enter `HR_ORCL` for Connection Name. The connection name is an arbitrary alias; conventionally, it's a combined username and database name.
+2. Enter `hr` for Username, and enter the hr password in the Password field. (If you check the Save Password box, the password will be stored as an encrypted file on your local machine.)
+3. Select Basic from the Connection Type list.
+4. Provide information for the following settings:
+   - Hostname: The host name or IP address of the machine running the database
+   - Port: The database listener port (default is 1521)
+   - SID or Service Name: The database SID or service name
+5. Click Test to validate the new connection. Figure 1 shows the dialog box after the connection has validated successfully.
+6. If your test reports "Status: Success," click Connect. Oracle SQL Developer will save the new connection, close the dialog box, and connect to the database. (If you click Save instead of Connect, you will be able to create more new connections in the dialog box before connecting.)
+
+Now HR_ORCL appears in Connections Navigator, and you can expand it to browse the database.
+
+### TNS Connections to Oracle Database
+
+The TNS connection type is an appropriate option in any of the following circumstances:
+- You have an Oracle client installed on your machine.
+- You have access to many Oracle Database instances.
+- You do not know the machine details of the system hosting the Oracle Database instance you want to connect to.
+
+A TNS connection uses an alias entry from a tnsnames.ora file. Oracle SQL Developer uses only one tnsnames.ora file. You may have more than one on your local machine or want to use the tnsnames.ora file on a remote machine, so note that Oracle SQL Developer looks sequentially for the tnsnames.ora file in the following locations:
+
+1. $HOME/.tnsnames.ora
+2. $TNS_ADMIN/tnsnames.ora
+3. /etc/tnsnames.ora (non-Windows systems)
+4. $ORACLE_HOME/network/admin/tnsnames.ora
+5. Registry key
+
+On Windows systems, if a tnsnames.ora file exists but Oracle SQL Developer isn't using it, create a TNS_ADMIN environment variable via Control Panel -> System -> Advanced -> Environment Variables, specifying the file's location as the variable's value.
+
+Follow these steps to create a TNS connection in Oracle SQL Developer:
+
+1. In the New/Select Database Connection dialog box, enter the same connection name, username, and password you used for the basic connection.
+2. Select TNS from the Connection Type list. The GUI changes slightly to provide a list of all network alias entries available to you. Select an alias.
+3. Click Test and Connect as before.
+
+### LDAP Connections to Oracle Database
+
+Oracle Internet Directory is a directory service that enables you to store and manage network service names centrally. With it, user identity information can be stored in a directory instead of in multiple databases. Oracle Internet Directory is an implementation of the LDAP directory service and a component of Oracle Identity Management. For information on how to install, set up, and configure Oracle Internet Directory, see the *Oracle Internet Directory Administrator's Guide*.
+
+To look up database services in Oracle Internet Directory and create an LDAP connection in Oracle SQL Developer, follow these steps:
+
+1. In the New/Select Database Connection dialog box, enter a new connection name, username, and password for the database user.
+2. Select LDAP from the Connection Type list.
+3. Select a server from the LDAP Server list, which is populated with entries from an ldap.ora file (similar to the tnsnames.ora file). Alternatively, you can enter LDAP server details directly.
+4. Fill in the LDAP Admin User and LDAP Admin Password fields.
+5. Click Load to populate the DB Service list with all the database service entries from Oracle Internet Directory.
+6. Select a service from the DB Service list, as shown in Figure 2.
+7. Click Test and Connect as before.
+
+### OS Authentication and Proxy Authentication
+
+Alternatives to database authentication and LDAP authentication include operating system (OS) and proxy authentication. You can create connections in Oracle SQL Developer for users who authenticate with these mechanisms.
+
+**OS authentication**: With OS authentication, Oracle Database uses a database user's OS login credentials to authenticate that user. The user doesn't provide a username or password to access the database, and Oracle Database doesn't store and manage the account password. Local OS authentication can be used when the client and the database server are on the same machine. Remote OS authentication is possible but is not considered secure.
+
+To configure local OS authentication for a new user, first find the value of the OS_AUTHENT_PREFIX database initialization parameter in your system's init.ora file. When you create this new user in the database, you must add this parameter value as a prefix to the OS username. The default value is OPS$, for backward compatibility with earlier database releases. (If the value is "", the OS username and the database username are the same, so you don't need to add a prefix to create the Oracle usernames.)
+
+Establish a basic connection with the HR schema as the SYSTEM user. Execute the following from the SQL worksheet, using your database's OS_AUTHENT_PREFIX prefix and substituting your own OS username for "sue":
+
+```sql
+CREATE USER ops$sue IDENTIFIED EXTERNALLY;
+GRANT Connect, resource to sue;
+```
+
+Now create a basic connection for this user from the New/Select Database Connection dialog box. Enter a connection name; select Basic for Connection Type; fill in the Hostname and Port fields; select OS Authentication; and provide a SID or Service name. Click Test and Connect as before.
+
+**Proxy authentication**: Proxy authentication means that one JDBC connection acts as a proxy for other JDBC connections. Before you can create a connection that uses proxy authentication, you need a proxy user. In the following example, you create a new user named HR_PROXY_USER and connect that user through the existing HR user.
+
+To create the new proxy user (HR_PROXY_USER) and grant the correct proxy authentication privileges, execute the following in the SQL worksheet:
+
+```sql
+CREATE USER HR_proxy_user IDENTIFIED BY <<em> password</em>>;
+ALTER USER HR_proxy_user GRANT CONNECT THROUGH HR AUTHENTICATED USING PASSWORD;
+```
+
+You also need to grant any other privileges required by the new user, such as CREATE SESSION.
+
+Once your proxy user exists, you can create a new proxy connection for HR in Oracle SQL Developer. Select Proxy Connection in the New/Select Database Connection dialog box, and complete the details in the Oracle Proxy Connection dialog box, as shown in Figure 3.
+
+### Connecting to Third-Party Databases
+
+Oracle SQL Developer supports browsing and reviewing data and objects in Microsoft Access, MySQL, Microsoft SQL Server, and Sybase. It also offers a SQL worksheet for ANSI SQL commands to update or create objects for these databases. Users who want to migrate from third-party databases to Oracle Database can use the Oracle SQL Developer Migration Workbench. For any of these situations, you need to create a connection to your third-party database.
+
+**Installing third-party drivers**: The correct third-party driver must be installed before you can create the connection. You can install third-party drivers either manually or by using Check for Updates (Help->Check for Updates). For manual installation, you can download supported drivers from the following locations:
+
+- Microsoft SQL Server: https://www.microsoft.com/en-us/download/details.aspx?id=11774
+- MySQL: https://dev.mysql.com/downloads/connector/j/
+- Sybase: https://www.sap.com/developer/trials-downloads/additional-downloads/jdbc-driver-for-sap-ase-16-0-sp02-and-later-16129.html
+
+Microsoft Access does not require an additional driver, because it uses a JDBC/ODBC bridge.
+
+After downloading the driver you need, expand the driver binary Java Archive (JAR) file, which is typically inside the downloaded archive file:
+
+1. Select Tools -> Preferences -> Database -> Third Party JDBC Drivers.
+2. Click Add Entry, and add your specific JAR file.
+
+Now you can create a connection for your third-party database.
+
+**Creating a Microsoft Access connection**: To create a connection for Microsoft Access, follow these steps in the New/Select Database Connection dialog box:
+
+1. Enter a connection name.
+2. Click the Access tab.
+3. Click Browse to locate the .mdb file you want to work with.
+4. Click Connect.
+
+You can now expand and browse the new Microsoft Access connection in the Connections Navigator.
+
+**Creating a Microsoft SQL Server, Sybase, or MySQL connection**: To create a connection to a Microsoft SQL Server, Sybase, or MySQL database in the New / Select Database Connection dialog box, follow these steps:
+
+1. Enter a connection name, username, and password.
+2. Click the SQL Server, Sybase, or MySQL tab. Figure 4 shows the SQL Server tab.
+
+You can now browse your Microsoft SQL Server, Sybase, or MySQL database in the Connections Navigator.
+
+Oracle SQL Developer provides an array of alternatives for connecting to Oracle and third-party databases. Support for both Oracle JDBC Type IV (thin) and Type II (thick) drivers lets you access Oracle Databases via basic, TNS, or LDAP connection types. You can make connections for Oracle Database users who authenticate via database, OS, or proxy authentication. Connecting to a third-party database from Oracle SQL Developer lets you work in that database and gives you a starting point for migrating to Oracle Database.
