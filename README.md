@@ -39,7 +39,7 @@ To get a copy of MDX Blog Template up and running on your local machine, follow 
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/devbertskie/next-mdx-blog.git
+   git clone https://github.com/soulwax/next-mdx-blog.git
    ```
 
    After successful cloned. Head over to the project directory
